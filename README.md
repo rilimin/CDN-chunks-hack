@@ -3,11 +3,11 @@ Totally legit
 
 # How to use
 
-1. Change infos inside config.toml
+1. Change infos inside `config.toml`
 2. Run `go run .` to start server in localhost
 
 # config.toml explain
-1. Port: of the server
+1. Port: port of the server
 
 2. ChunkSize: chunk size in bytes
 
