@@ -1,0 +1,6 @@
+Port = '8080'
+ChunkSize = 10475520
+MaxRoutine = 6
+Key = 105
+WebhookPath = '/path/to/file.txt'
+UserToken = '<Discord user token>'
