@@ -14,6 +14,7 @@ func main() {
 	cfg := utils.ReadCfg()
 
 	http.HandleFunc("/", home)
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./public/static"))))
 
 	http.HandleFunc("/download/{id1}/{id2}", downloader.DownloadHandler)
 	http.HandleFunc("/video/{id1}/{id2}", downloader.RangeVideo)

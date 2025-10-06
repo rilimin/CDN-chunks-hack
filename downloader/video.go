@@ -19,35 +19,62 @@ const (
 var fileInfo utils.FileInfo
 var newLinks []string
 var size int64
+var id1, id2 string
 
 func RangeVideo(w http.ResponseWriter, req *http.Request) {
 	//f, size, err := openfile(vname)
 
-	getFileInfo := func() utils.FileInfo {
+	fmt.Println("--- Request Headers ---")
+	for name, values := range req.Header {
+		for _, value := range values {
+			fmt.Printf("%s: %s\n", name, value)
+		}
+	}
+	fmt.Println("Method: " + req.Method)
+	fmt.Println("-----------------------")
+
+	getFileInfo := func() (utils.FileInfo, error) {
 		//var fileInfo FileInfo
 		var info bytes.Buffer
 
 		resp, err := http.Get(
 			utils.RenewLinks([]string{
 				fmt.Sprintf("https://cdn.discordapp.com/attachments/%s/%s/LOD.LOD",
-					req.PathValue("id1"),
-					req.PathValue("id2"),
+					id1,
+					id2,
 				)})[0])
 
-		utils.Check(err)
+		if err != nil {
+			return utils.FileInfo{}, fmt.Errorf("failed to send get request, error: %s", err.Error())
+		}
 		defer resp.Body.Close()
 
 		// Check server response
 		if resp.StatusCode != http.StatusOK {
-			fmt.Println(resp.StatusCode)
+			return utils.FileInfo{}, fmt.Errorf("failed to request file info, response: %d", resp.StatusCode)
 		}
 
 		_, err = io.Copy(&info, resp.Body)
-		utils.Check(err)
-		return utils.CreateFileInfo(info.String())
+		if err != nil {
+			return utils.FileInfo{}, fmt.Errorf("failed to copy response body, error: %s", err.Error())
+		}
+		return utils.CreateFileInfo(info.String()), nil
 	}
 
 	//size, _ := strconv.ParseInt(fileInfo.Size, 10, 64)
+
+	if id1 != req.PathValue("id1") || id2 != req.PathValue("id2") {
+		id1 = req.PathValue("id1")
+		id2 = req.PathValue("id2")
+
+		fileInfo, err := getFileInfo()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		newLinks = utils.RenewLinks(fileInfo.Links)
+		size, _ = strconv.ParseInt(fileInfo.Size, 10, 64)
+	}
 
 	w.Header().Set("Content-Type", "video/mp4")
 
@@ -64,9 +91,6 @@ func RangeVideo(w http.ResponseWriter, req *http.Request) {
 	//
 	// but this not worked for Safari and Firefox
 	if rangeHeader == "" {
-		fileInfo = getFileInfo()
-		newLinks = utils.RenewLinks(fileInfo.Links)
-		size, _ = strconv.ParseInt(fileInfo.Size, 10, 64)
 
 		ra := httpRange{
 			start:  0,
@@ -101,6 +125,7 @@ func RangeVideo(w http.ResponseWriter, req *http.Request) {
 	fmt.Printf("\n%s request range %s\n", reqer, rangeHeader)
 	ranges, err := parseRange(rangeHeader, size)
 	if err != nil {
+		fmt.Println(err.Error())
 		http.Error(w, err.Error(), 400)
 		return
 	}
